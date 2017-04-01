@@ -24,6 +24,8 @@ LiquidCrystal_I2C lcd(0x3f, 20, 4);    // 20x4 display with I2C address 0x3f
 #define ONE_WIRE_BUS 8    // data one wire port 7
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
+float min_temp;
+float max_temp;
 
 void setup () {
     pinMode(onboard_led, OUTPUT);
@@ -54,6 +56,9 @@ void setup () {
 
     // one wire sensort init
     sensors.begin();
+    sensors.requestTemperatures();
+    min_temp = sensors.getTempCByIndex(0);
+    max_temp = min_temp;
 }
 
 void loop () {
@@ -81,19 +86,22 @@ void loop () {
 
         // rotate three texts every 7s
         if (epoch % 7 == 0) {
-            byte one_of_three = epoch / 7 % 3;
+            lcd.setCursor(0,2);
+            byte one_of_three = epoch / 7 % 2;
             switch (one_of_three) {
                 case 0:
-                    lcd.setCursor(0,3);
-                    lcd.print("Leonard wo bist du? ");
+                    lcd.print(
+                        "max: "
+                        +tempToString(max_temp)
+                        +"  "
+                    );
                     break;
                 case 1:
-                    lcd.setCursor(0,3);
-                    lcd.print("Kristina wo bist du?");
-                    break;
-                default:
-                    lcd.setCursor(0,3);
-                    lcd.print("Katka wo bist du?   ");
+                    lcd.print(
+                        "min: "
+                        +tempToString(min_temp)
+                        +"    "
+                    );
                     break;
             }
         }
@@ -109,17 +117,24 @@ void showDateTime (DateTime now) {
     lcd.print(formatDate(now));
     lcd.setCursor(0,1);
     lcd.print(formatTime(now));
-    lcd.setCursor(0,2);
-    lcd.print("booted: "+upTime(datetime_boot)+"     ");
+    lcd.setCursor(0,3);
+    lcd.print("since: "+upTime(datetime_boot)+"     ");
 }
 
 void showTemperature () {
     sensors.requestTemperatures();
+    float cur_temp = sensors.getTempCByIndex(0);
+    if (cur_temp > max_temp) {
+        max_temp = cur_temp;
+    }
+    if (cur_temp < min_temp) {
+        min_temp = cur_temp;
+    }
+
     lcd.setCursor(10,1);
     lcd.print(
-        tempToString(sensors.getTempCByIndex(0))
-        +String(char(0xDF))     // °
-        +String("C  ")
+        tempToString(cur_temp)
+        +String("  ")
     );
 }
 
@@ -161,6 +176,8 @@ String tempToString (float temp) {
         String(degree)
         +"."
         +String(degree_fraction)
+        +String(char(0xDF))     // °
+        +String("C")
     );
 }
 
