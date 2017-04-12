@@ -7,12 +7,12 @@
 #include <internalVCC.h>
 
 // hearth beat var
-int onboard_led = 13;
+byte onboard_led = 13;
 byte loop_tick = 0;
 
 // button
-int buttonPin = 0;
-int buttonState = 0;
+byte buttonPin = 0;
+byte buttonState = 0;
 byte button_irq = 2;
 
 // real time clock vars
@@ -20,15 +20,15 @@ RTC_DS1307 rtc;  // RTClib clock
 DateTime datetime_boot;
 char* day_names[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 char* month_names[] = {"-", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-int hearth_beat_status = HIGH;
+byte hearth_beat_status = HIGH;
 byte sqw_tick_ping = 1;
 const byte rtcsqw_pin = 1;
 const byte rtcsqw_irq = 3;
-int uptime = 0;
+long uptime = 0;
 
 // display vars
 LiquidCrystal_I2C lcd(0x3f, 20, 4);    // 20x4 display with I2C address 0x3f
-int keep_lcd_on = 10;
+byte keep_lcd_on = 10;
 
 // temperature vars
 #define ONE_WIRE_BUS 8    // data one wire port 7
