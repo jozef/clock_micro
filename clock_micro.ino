@@ -11,9 +11,9 @@ byte onboard_led = 13;
 byte loop_tick = 0;
 
 // button
-byte buttonPin = 0;
+byte buttonPin = 1;
 byte buttonState = 0;
-byte button_irq = 2;
+byte button_irq = 3;
 
 // real time clock vars
 RTC_DS1307 rtc;  // RTClib clock
@@ -22,8 +22,8 @@ char* day_names[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 char* month_names[] = {"-", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 byte hearth_beat_status = HIGH;
 byte sqw_tick_ping = 1;
-const byte rtcsqw_pin = 1;
-const byte rtcsqw_irq = 3;
+const byte rtcsqw_pin = 0;
+const byte rtcsqw_irq = 2;
 long uptime = 0;
 
 // display vars
