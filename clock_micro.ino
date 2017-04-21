@@ -32,10 +32,15 @@ byte keep_lcd_on = 10;
 
 // temperature vars
 #define ONE_WIRE_BUS 8    // data one wire port 7
+#define TEMPERATURE_PRECISION 9
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
+float cur_temp;
 float min_temp;
 float max_temp;
+uint8_t temp_sensor_current = 0;
+uint8_t temp_sensors_count = 0;
+DeviceAddress temp_sensors[5];
 
 void setup () {
     pinMode(onboard_led, OUTPUT);
@@ -73,10 +78,20 @@ void setup () {
 
     // one wire sensort init
     sensors.begin();
-    sensors.requestTemperatures();
-    min_temp = sensors.getTempCByIndex(0);
-    max_temp = min_temp;
-    showTemperature();
+    temp_sensors_count = sensors.getDeviceCount();
+    if (temp_sensors_count) {
+        if (temp_sensors_count > 5) {
+            temp_sensors_count = 5;
+        }
+        for (uint8_t i = 0;i<temp_sensors_count;i++) {
+            sensors.getAddress(temp_sensors[i],i);
+            sensors.setResolution(temp_sensors[i], TEMPERATURE_PRECISION);
+        }
+        sensors.requestTemperaturesByAddress(temp_sensors[temp_sensor_current]);
+        min_temp = sensors.getTempC(temp_sensors[temp_sensor_current]);
+        max_temp = min_temp;
+        showTemperature();
+    }
 
     // just in case....
     lcd.setCursor(0,3);
@@ -113,8 +128,8 @@ void loop () {
             }
         }
 
-        // read temperature every 30s
-        if (epoch % 30 == 0) {
+        // read temperature every 10s
+        if (epoch % 10 == 0) {
             showTemperature();
         }
 
@@ -122,28 +137,6 @@ void loop () {
         if (epoch % 3 == 0) {
             lcd.setCursor(14,3);
             lcd.print(vccToString(vccVoltage()));
-        }
-
-        // rotate three texts every 7s
-        if (epoch % 5 == 0) {
-            lcd.setCursor(0,2);
-            byte one_of_three = epoch / 5 % 2;
-            switch (one_of_three) {
-                case 0:
-                    lcd.print(
-                        "max: "
-                        +tempToString(max_temp)
-                        +"  "
-                    );
-                    break;
-                case 1:
-                    lcd.print(
-                        "min: "
-                        +tempToString(min_temp)
-                        +"  "
-                    );
-                    break;
-            }
         }
 
         // start powersaveing (power-down) after 3min
@@ -193,8 +186,12 @@ void showDateTime (DateTime now, TimeSpan uptime_delta) {
 }
 
 void showTemperature () {
-    sensors.requestTemperatures();
-    float cur_temp = sensors.getTempCByIndex(0);
+    if (!temp_sensors_count) {
+        return;
+    }
+
+    sensors.requestTemperaturesByAddress(temp_sensors[temp_sensor_current]);
+    cur_temp = sensors.getTempC(temp_sensors[temp_sensor_current]);
     if (cur_temp > max_temp) {
         max_temp = cur_temp;
     }
@@ -205,8 +202,25 @@ void showTemperature () {
     lcd.setCursor(10,1);
     lcd.print(
         tempToString(cur_temp)
-        +String("  ")
+        +String(char(0xDF))     // °
+        +String("C")
+        +"   "
     );
+    lcd.setCursor(0,2);
+    lcd.print(
+        "["+String(temp_sensor_current+1)+"/"+String(temp_sensors_count)+"]"
+        +" ("
+        +tempToString(min_temp)
+        +"/"
+        +tempToString(max_temp)
+        +")  "
+    );
+
+    // rotate temperature sensors
+    temp_sensor_current++;
+    if (temp_sensor_current >= temp_sensors_count ) {
+        temp_sensor_current = 0;
+    }
 }
 
 String timeNumToString (uint8_t num) {
@@ -247,8 +261,6 @@ String tempToString (float temp) {
         String(degree)
         +"."
         +String(degree_fraction)
-        +String(char(0xDF))     // °
-        +String("C")
     );
 }
 
