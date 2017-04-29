@@ -3,6 +3,7 @@
 #include <RTClib.h>
 #include <LiquidCrystal_I2C.h>
 #include <DallasTemperature.h>
+#include "melody.h"
 #include "LowPower.h"
 #include <internalVCC.h>
 
@@ -106,7 +107,8 @@ void loop () {
         lcd.backlight();
 
         lcd.setCursor(0,3);
-        lcd.print("button");
+        lcd.print("music! ");
+        playTune(melody, durations, tempo);
     }
 
     // do every new second
