@@ -25,7 +25,7 @@ byte hearth_beat_status = HIGH;
 byte sqw_tick_ping = 1;
 const byte rtcsqw_pin = 0;
 const byte rtcsqw_irq = 2;
-long uptime = 0;
+uint32_t uptime = 0;
 
 // display vars
 LiquidCrystal_I2C lcd(0x3f, 20, 4);    // 20x4 display with I2C address 0x3f
@@ -65,9 +65,9 @@ void setup () {
     }
     if (! rtc.isrunning()) {
         Serial.println("Clock not running, setting now...");
-        rtc.adjust(DateTime(1970, 2, 26, 01, 05, 00));
-        //rtc.adjust(DateTime(2017, 4, 8, 20, 45, 00));
+        rtc.adjust(DateTime(1970, 2, 26, 00, 00, 00));
     }
+    //rtc.adjust(DateTime(2017, 7, 20, 21, 43, 00));
     datetime_boot = rtc.now();
     pinMode(rtcsqw_pin, INPUT_PULLUP);
     //pinMode(rtcsqw_pin, INPUT);
@@ -98,6 +98,7 @@ void setup () {
     lcd.setCursor(0,3);
     lcd.print("delay 3s");
     delay(3000);
+    showDateTime(datetime_boot, 0);
 }
 
 void loop () {
@@ -114,15 +115,7 @@ void loop () {
     // do every new second
     if (sqw_tick_ping) {
         sqw_tick_ping = 0;
-        DateTime datetime_now = rtc.now();
-
-        // update time every second
-        TimeSpan uptime_delta = datetime_now - datetime_boot;
-        uptime = uptime_delta.totalseconds();
-        showDateTime(datetime_now, uptime_delta);
-
-        // hearth beat
-        uint32_t epoch = datetime_now.unixtime();
+        uptime++;
 
         if (keep_lcd_on--) {
             if (!keep_lcd_on) {
@@ -130,36 +123,48 @@ void loop () {
             }
         }
 
-        // read temperature every 10s
-        if (epoch % 10 == 0) {
-            showTemperature();
-        }
+        // Serial.println("uptime: "+String(int(millis()/1000) % 60));
 
-        // read voltage every 3s
-        if (epoch % 3 == 0) {
+        // read temperature every 60s
+        // read voltage every 60s
+        if (uptime % 60 == 0) {
+            DateTime datetime_now = rtc.now();
+            TimeSpan uptime_delta = datetime_now - datetime_boot;
+            uptime = uptime_delta.totalseconds();
+            uint32_t epoch = datetime_now.unixtime();
+            showDateTime(datetime_now, uptime_delta);
+            showTemperature();
             lcd.setCursor(14,3);
             lcd.print(vccToString(vccVoltage()));
         }
-
-        // start powersaveing (power-down) after 3min
-        if (uptime > 120) {
-            LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
-        }
-        // start powersaveing (idle) after 1min
-        else if (uptime > 60) {
-            // for ATmega32U4
-            LowPower.idle(
-                SLEEP_8S, ADC_OFF, TIMER4_OFF, TIMER3_OFF, TIMER1_OFF,
-                TIMER0_OFF, SPI_OFF, USART1_OFF, TWI_OFF, USB_OFF
-            );
-        }
     }
+
+    // start powersaveing (power-down) after first minute
+    if (uptime >= 60) {
+        LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
+        //hearth_beat_status = !hearth_beat_status;
+        //digitalWrite(onboard_led, hearth_beat_status);
+    }
+    else {
+        digitalWrite(onboard_led, HIGH);
+        delay(50);
+        digitalWrite(onboard_led, LOW);
+        delay(200);
+    }
+    // start powersaveing (idle) after 1min
+    //else if (uptime > 60) {
+    //    // for ATmega32U4
+    //    LowPower.idle(
+    //        SLEEP_8S, ADC_OFF, TIMER4_OFF, TIMER3_OFF, TIMER1_OFF,
+    //        TIMER0_OFF, SPI_OFF, USART1_OFF, TWI_OFF, USB_OFF
+    //    );
+    //}
 
     // hearth beat every 7 iterations (in powersave mode every 7s)
-    if ((loop_tick++ % 7 == 0) || (hearth_beat_status == HIGH)) {
-        hearth_beat_status = !hearth_beat_status;
-        digitalWrite(onboard_led, hearth_beat_status);
-    }
+    //if ((loop_tick++ % 7 == 0) || (hearth_beat_status == HIGH)) {
+    //    hearth_beat_status = !hearth_beat_status;
+    //    digitalWrite(onboard_led, hearth_beat_status);
+    //}
 
     // on serial
     //int serial_data_size = Serial.available();
@@ -251,8 +256,8 @@ String formatTime (DateTime dt) {
         timeNumToString(dt.hour())
         +':'+
         timeNumToString(dt.minute())
-        +':'+
-        timeNumToString(dt.second())
+//        +':'+
+//        timeNumToString(dt.second())
     );
 }
 
